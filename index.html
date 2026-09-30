@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Regression Playground</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<style>
+:root{--bg:#f7f6f2;--card:#ffffff;--ink:#1c1b19;--mut:#6b6a66;--line:#e3e1db;--blue:#1f6feb;--red:#d1344b;--green:#1a7f4b;--amber:#b7791f;--gray:#8b8a85;--soft:#f0eee8}
+@media(prefers-color-scheme:dark){:root{--bg:#141413;--card:#1e1e1b;--ink:#ecebe6;--mut:#9b9a94;--line:#34332f;--blue:#6ea8ff;--red:#ff7b8f;--green:#5fd39a;--amber:#e6b450;--gray:#8b8a85;--soft:#282824}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:1400px;margin:0 auto;padding:10px}
+h1{font-size:20px;font-weight:600;margin:0 0 2px}
+.sub{color:var(--mut);font-size:13px;margin:0 0 14px}
+.layout{display:grid;grid-template-columns:clamp(190px,26vw,290px) minmax(0,1fr);gap:12px;align-items:start}
+@media(max-width:480px){.layout{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.card h2{font-size:14px;font-weight:600;margin:0 0 2px}
+.cap{font-size:12.5px;color:var(--mut);margin:0 0 8px}
+.ctrl{position:sticky;top:8px;max-height:calc(100vh - 16px);overflow-y:auto;padding:10px 12px}
+@media(max-width:480px){.ctrl{position:static;max-height:none}}
+.grp{font-size:11.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--mut);margin:14px 0 4px;border-top:1px solid var(--line);padding-top:10px}
+.grp:first-of-type{margin-top:0;border-top:0;padding-top:0}
+.sl{margin:6px 0}
+.sl label{display:flex;justify-content:space-between;gap:6px;font-size:12.5px;line-height:1.25}
+.sl b{font-weight:600;font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:var(--blue)}
+.btns{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+button{font:inherit;font-size:13px;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:5px 10px;cursor:pointer}
+button:hover{background:var(--soft)}
+.chk{font-size:13px;display:flex;gap:6px;align-items:center;margin-top:6px}
+.right{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;min-width:0}
+.card{min-width:0}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,330px),1fr));gap:12px}
+svg{width:100%;height:auto;display:block}
+.grid{stroke:var(--line);stroke-width:.6}
+.tk{fill:var(--mut);font-size:11px}
+.ax{fill:var(--mut);font-size:12px}
+.row{display:flex;justify-content:space-between;gap:8px;font-size:13.5px;padding:2px 0;border-bottom:1px dotted var(--line)}
+.row span{color:var(--mut)}
+.row b{font-weight:600;font-variant-numeric:tabular-nums;text-align:right}
+.row em{font-style:normal;font-size:11.5px;color:var(--amber);margin-left:6px;font-weight:400}
+.bar{display:flex;height:34px;border-radius:8px;overflow:hidden;margin:6px 0 4px;font-size:12px;color:#fff}
+.bar div{display:flex;align-items:center;justify-content:center;white-space:nowrap;overflow:hidden;transition:width .12s}
+.sub2{font-size:12px;color:var(--mut)}
+.formula{font-size:14px;overflow-x:auto;padding:4px 0;border-bottom:1px dotted var(--line)}
+.formula:last-child{border-bottom:0}
+.fl{font-size:11.5px;color:var(--mut);text-transform:uppercase;letter-spacing:.04em;margin-top:6px}
+.katex{font-size:1.04em}
+.fu{color:var(--green);font-weight:700}
+.fd{color:var(--red);font-weight:700}
+.fup{color:var(--green);font-weight:700;animation:glowU .95s ease-out}
+.fdp{color:var(--red);font-weight:700;animation:glowD .95s ease-out}
+@keyframes glowU{0%{text-shadow:0 0 16px var(--green),0 0 6px var(--green);filter:brightness(1.25)}100%{text-shadow:0 0 0 transparent;filter:none}}
+@keyframes glowD{0%{text-shadow:0 0 16px var(--red),0 0 6px var(--red);filter:brightness(1.25)}100%{text-shadow:0 0 0 transparent;filter:none}}
+.rup{animation:glowU .95s ease-out;color:var(--green)}
+.rdn{animation:glowD .95s ease-out;color:var(--red)}
+.leg{font-size:12.5px}.leg .u{color:var(--green);font-weight:700}.leg .d{color:var(--red);font-weight:700}
+.katex-display{margin:.35em 0}
+.sub-h{font-size:12px;font-weight:600;color:var(--mut);margin:10px 0 2px;text-transform:uppercase;letter-spacing:.04em}
+pre.sub{font:12.5px/1.65 ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--soft);border-radius:8px;padding:8px 10px;margin:8px 0 0;white-space:pre-wrap;color:var(--ink)}
+.pill{display:inline-block;border-radius:6px;padding:1px 8px;font-size:12px;font-weight:600}
+.ok{background:rgba(26,127,75,.15);color:var(--green)}
+.no{background:rgba(209,52,75,.14);color:var(--red)}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>Regression Playground</h1>
+<p class="sub">Descriptive stats → best-fit line → sum of squares → F. Move any slider and watch every number and plot update together. Pin a baseline to see exactly what changed.</p>
+<div class="layout">
+
+<div class="card ctrl">
+<div id="controls"></div>
+<label class="chk"><input type="checkbox" id="tRes" checked> show residuals</label>
+<label class="chk"><input type="checkbox" id="tNull" checked> show the null model (Ȳ for everyone)</label>
+<div class="btns">
+<button id="bNew">New random sample</button>
+<button id="bPin">Pin baseline</button>
+<button id="bPerm">Permutation test</button>
+<button id="bReset">Reset</button>
+</div>
+</div>
+
+<div class="right">
+<div class="card">
+<h2>1. Data and fitted line</h2>
+<p class="cap">Black dots are people. Blue is the least-squares line; it always passes through the ring at (X̄, Ȳ). Red segments are residuals. The dashed gray line is the null model.</p>
+<div id="scatter"></div>
+<div id="scatterNote" class="sub2"></div>
+</div>
+
+<div class="card">
+<h2>Live formulas</h2>
+<p class="cap">Each formula with your current numbers substituted. <span class="leg"><span class="u">Green</span> = went up, <span class="d">red</span> = went down, compared with your last move (or the pinned baseline). The number glows when it just changed.</span></p>
+<div id="formulas"></div>
+</div>
+
+<div class="two">
+<div class="card">
+<h2>2. Descriptive stats</h2>
+<p class="cap">What you computed in earlier lectures.</p>
+<div id="desc"></div>
+<div class="sub-h">Regression</div>
+<div id="reg"></div>
+</div>
+<div class="card">
+<h2>3. Variance explained (ANOVA)</h2>
+<p class="cap">SS_T = SS_M + SS_res. The bar is the whole pie.</p>
+<div class="bar" id="ssbar"></div>
+<div id="anova"></div>
+<div class="sub-h">Properties of the fitted model</div>
+<div id="props"></div>
+</div>
+</div>
+
+<div class="two">
+<div class="card">
+<h2>4. Is F bigger than chance?</h2>
+<p class="cap">Curve = F(1, n−2) when there is no relationship. Red tail = the 5% you choose (alpha). Blue = your p-value.</p>
+<div id="fplot"></div>
+<div id="fnote" class="sub2"></div>
+</div>
+<div class="card">
+<h2>5. Why the best line is the bottom</h2>
+<p class="cap">SS_res as a function of the slope. The minimum sits at the best-fit slope, where the derivative is 0. Use the nudge slider to move off it.</p>
+<div id="parab"></div>
+<div id="pnote" class="sub2"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script>
+//#math-start
+function lg(z){const c=[676.5203681218851,-1259.1392167224028,771.3234287776531,-176.6150291621406,12.507343278686905,-0.13857109526572012,9.984369578019572e-6,1.5056327351493116e-7];if(z<0.5)return Math.log(Math.PI/Math.sin(Math.PI*z))-lg(1-z);z-=1;let x=0.9999999999998099;for(let i=0;i<8;i++)x+=c[i]/(z+i+1);const t=z+7.5;return 0.5*Math.log(2*Math.PI)+(z+0.5)*Math.log(t)-t+Math.log(x)}
+function bcf(a,b,x){const qab=a+b,qap=a+1,qam=a-1;let c=1,d=1-qab*x/qap;if(Math.abs(d)<1e-30)d=1e-30;d=1/d;let h=d;for(let m=1;m<=300;m++){const m2=2*m;let aa=m*(b-m)*x/((qam+m2)*(a+m2));d=1+aa*d;if(Math.abs(d)<1e-30)d=1e-30;c=1+aa/c;if(Math.abs(c)<1e-30)c=1e-30;d=1/d;h*=d*c;aa=-(a+m)*(qab+m)*x/((a+m2)*(qap+m2));d=1+aa*d;if(Math.abs(d)<1e-30)d=1e-30;c=1+aa/c;if(Math.abs(c)<1e-30)c=1e-30;d=1/d;const del=d*c;h*=del;if(Math.abs(del-1)<1e-13)break}return h}
+function ib(x,a,b){if(x<=0)return 0;if(x>=1)return 1;const bt=Math.exp(lg(a+b)-lg(a)-lg(b)+a*Math.log(x)+b*Math.log(1-x));return x<(a+1)/(a+b+2)?bt*bcf(a,b,x)/a:1-bt*bcf(b,a,1-x)/b}
+const Fsf=(x,d1,d2)=>x<=0?1:ib(d2/(d2+d1*x),d2/2,d1/2);
+const Fpdf=(x,d1,d2)=>x<=0?0:Math.exp(lg((d1+d2)/2)-lg(d1/2)-lg(d2/2)+(d1/2)*Math.log(d1/d2)+(d1/2-1)*Math.log(x)-((d1+d2)/2)*Math.log(1+d1*x/d2));
+function Fcrit(alpha,d1,d2){let lo=0,hi=1e5;for(let i=0;i<200;i++){const m=(lo+hi)/2;if(Fsf(m,d1,d2)>alpha)lo=m;else hi=m}return(lo+hi)/2}
+function regress(X,Y){
+  const n=X.length;let xb=0,yb=0;for(let i=0;i<n;i++){xb+=X[i];yb+=Y[i]}xb/=n;yb/=n;
+  let Sxx=0,Sxy=0,Syy=0;for(let i=0;i<n;i++){const dx=X[i]-xb,dy=Y[i]-yb;Sxx+=dx*dx;Sxy+=dx*dy;Syy+=dy*dy}
+  const b1=Sxy/Sxx,b0=yb-b1*xb;
+  let SSres=0,SSM=0,se=0,sxe=0,she=0;
+  for(let i=0;i<n;i++){const yh=b0+b1*X[i],e=Y[i]-yh;SSres+=e*e;SSM+=(yh-yb)*(yh-yb);se+=e;sxe+=X[i]*e;she+=yh*e}
+  const dfres=n-2,MSM=SSM,MSres=SSres/dfres,F=MSres>0?MSM/MSres:Infinity;
+  return{n,xb,yb,Sxx,Sxy,Syy,sX:Math.sqrt(Sxx/(n-1)),sY:Math.sqrt(Syy/(n-1)),r:Sxy/Math.sqrt(Sxx*Syy),b1,b0,SST:Syy,SSM,SSres,dfres,MSM,MSres,F,R2:SSM/Syy,
+    p:Fsf(F,1,dfres),crit:Fcrit(0.05,1,dfres),sumE:se,sumXE:sxe,sumYhE:she}
+}
+function permF(X,Y,N,rnd){
+  const n=X.length;let xb=0;for(const x of X)xb+=x;xb/=n;
+  let Sxx=0;for(const x of X)Sxx+=(x-xb)*(x-xb);
+  let yb=0;for(const y of Y)yb+=y;yb/=n;let Syy=0;for(const y of Y)Syy+=(y-yb)*(y-yb);
+  const dx=X.map(x=>x-xb),ys=Y.slice(),out=[];
+  for(let k=0;k<N;k++){
+    for(let i=n-1;i>0;i--){const j=Math.floor(rnd()*(i+1));const t=ys[i];ys[i]=ys[j];ys[j]=t}
+    let Sxy=0;for(let i=0;i<n;i++)Sxy+=dx[i]*ys[i];
+    const r2=Sxy*Sxy/(Sxx*Syy);out.push(r2*(n-2)/(1-r2))
+  }
+  return out
+}
+//#math-end
+
+const $=id=>document.getElementById(id);
+const tx=(s,d)=>window.katex?katex.renderToString(s,{throwOnError:false,displayMode:!!d,trust:true}):s;
+let prevSnap=null;
+function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function gauss(r){let u=0,v=0;while(!u)u=r();while(!v)v=r();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)}
+let seed=7,zx=[],ze=[],perm=null,pinned=null;
+function regen(){const r=mulberry(seed);zx=[];ze=[];for(let i=0;i<200;i++){zx.push(gauss(r));ze.push(gauss(r))}}
+
+const SL=[
+['grp','Generate the data'],
+['n','Sample size n',5,200,1,30],
+['beta','True slope',-2,2,0.05,0.5],
+['sigma','Noise SD around the line',0.5,30,0.5,8],
+['sx','SD of X',1,30,0.5,10],
+['mx','Mean of X',0,100,1,50],
+['alpha','True intercept',-50,100,1,20],
+['grp','Change units after the data exist'],
+['xsc','Multiply X by',0.2,5,0.1,1],
+['ysc','Multiply Y by',0.2,5,0.1,1],
+['xadd','Add to X',-50,50,1,0],
+['yadd','Add to Y',-50,50,1,0],
+['grp','Try your own line'],
+['nudge','Nudge slope off the best fit',-1,1,0.02,0]
+];
+function decOf(step){const s=String(step);return s.includes('.')?s.split('.')[1].length:0}
+(function buildControls(){
+  let h='';
+  SL.forEach(s=>{
+    if(s[0]==='grp'){h+=`<div class="grp">${s[1]}</div>`;return}
+    const[id,label,min,max,step,val]=s;
+    h+=`<div class="sl"><label for="${id}">${label}<b id="v_${id}">${val.toFixed(decOf(step))}</b></label><input type="range" id="${id}" min="${min}" max="${max}" step="${step}" value="${val}"></div>`;
+  });
+  $('controls').innerHTML=h;
+  SL.forEach(s=>{if(s[0]!=='grp')$(s[0]).addEventListener('input',()=>{perm=null;update()})});
+})();
+
+function read(){const P={};SL.forEach(s=>{if(s[0]!=='grp'){P[s[0]]=parseFloat($(s[0]).value);$('v_'+s[0]).textContent=P[s[0]].toFixed(decOf(s[4]))}});return P}
+function build(P){const X=[],Y=[];for(let i=0;i<P.n;i++){const x=P.mx+P.sx*zx[i];const y=P.alpha+P.beta*x+P.sigma*ze[i];X.push(P.xsc*x+P.xadd);Y.push(P.ysc*y+P.yadd)}return{X,Y}}
+
+function ticks(lo,hi,c){const span=hi-lo,raw=span/c,mag=Math.pow(10,Math.floor(Math.log10(raw))),f=raw/mag;const step=(f<1.5?1:f<3?2:f<7?5:10)*mag;const out=[];for(let v=Math.ceil(lo/step)*step;v<=hi+1e-9;v+=step)out.push(+v.toFixed(10));return out}
+const ft=v=>String(Number(v.toFixed(2)));
+function f3(v){if(!isFinite(v))return v>0?'∞':'—';const a=Math.abs(v);return a>=1000?v.toFixed(0):a>=100?v.toFixed(1):a>=10?v.toFixed(2):v.toFixed(3)}
+const fp=v=>v<0.001?'< .001':v.toFixed(3);
+
+function rowsHTML(list,S){
+  return list.map(([key,label,val,fmt])=>{
+    let was='';
+    if(pinned&&key in pinned){const o=pinned[key];if(isFinite(o)&&isFinite(val)&&Math.abs(o-val)>1e-9*Math.max(1,Math.abs(o)))was=`<em>was ${fmt(o)}</em>`;else if(isFinite(o)!==isFinite(val))was=`<em>was ${fmt(o)}</em>`}
+    let cls='';
+    if(prevSnap&&key in prevSnap&&isFinite(val)&&isFinite(prevSnap[key])&&Math.abs(val-prevSnap[key])>1e-9*Math.max(1,Math.abs(val)))cls=val>prevSnap[key]?'rup':'rdn';
+    return `<div class="row"><span>${tx(label)}</span><b class="${cls}">${fmt(val)}${was}</b></div>`;
+  }).join('');
+}
+
+function update(){
+  const P=read(),{X,Y}=build(P),S=regress(X,Y);
+  const delta=Math.max(0.5*Math.abs(S.b1),0.5*S.sY/S.sX,0.02);
+  const u=S.b1+P.nudge*delta,u0=S.yb-u*S.xb,SSu=S.SSres+S.Sxx*(u-S.b1)*(u-S.b1);
+  const nudged=Math.abs(P.nudge)>1e-9;
+  const st={S,P,X,Y,u,u0,SSu,delta,nudged};
+  window.__last=st;
+  drawScatter(st);drawFormulas(st);drawDesc(st);drawAnova(st);drawF(st);drawParab(st);
+  prevSnap=snapOf(S);
+}
+
+
+function snapOf(S){return{n:S.n,xb:S.xb,sX:S.sX,yb:S.yb,sY:S.sY,r:S.r,b1:S.b1,b0:S.b0,R2:S.R2,SST:S.SST,SSM:S.SSM,SSres:S.SSres,dfres:S.dfres,MSM:S.MSM,MSres:S.MSres,F:S.F,crit:S.crit,p:S.p}}
+function drawFormulas({S,u,SSu,nudged}){
+  const ref=pinned||prevSnap,cur=snapOf(S);
+  const dirOf=(o,v,tol)=>{if(o===undefined||o===null)return 0;if(isFinite(o)!==isFinite(v))return isFinite(v)?-1:1;if(!isFinite(v))return 0;return Math.abs(o-v)>tol*Math.max(1,Math.abs(o))?(v>o?1:-1):0};
+  const num=(k,paren)=>{const v=cur[k];let t=isFinite(v)?f3(v):'\\infty';if(isFinite(v)&&k==='n'||k==='dfres')t=v.toFixed(0);if(paren&&isFinite(v)&&v<0)t='('+t+')';
+    const d=ref?dirOf(ref[k],v,1e-9):0;if(!d)return t;
+    const moved=prevSnap?dirOf(prevSnap[k],v,1e-9)!==0:false;
+    const cls=(d>0?'f':'f')&&(d>0?(moved?'fup':'fu'):(moved?'fdp':'fd'));
+    return `\\htmlClass{${cls}}{${t}}`};
+  const L=(label,tex)=>`<div class="fl">${label}</div><div class="formula">${tx(tex,true)}</div>`;
+  let h='';
+  h+=L('Slope from descriptives',`b_1=r\\,\\dfrac{s_Y}{s_X}=${num('r',1)}\\times\\dfrac{${num('sY')}}{${num('sX')}}=${num('b1')}`);
+  h+=L('Intercept: the line passes through the means',`b_0=\\bar Y-b_1\\bar X=${num('yb')}-${num('b1',1)}\\times${num('xb',1)}=${num('b0')}`);
+  h+=L('Split the total variation',`SS_T=SS_M+SS_{res}\\;\\Rightarrow\\;${num('SST')}=${num('SSM')}+${num('SSres')}`);
+  h+=L('Variance explained',`R^2=\\dfrac{SS_M}{SS_T}=\\dfrac{${num('SSM')}}{${num('SST')}}=${num('R2')}`);
+  h+=L('Degrees of freedom and mean squares',`df_{res}=n-2=${num('n')}-2=${num('dfres')}\\qquad MS_M=\\dfrac{SS_M}{1}=${num('MSM')}\\qquad MS_{res}=\\dfrac{SS_{res}}{df_{res}}=\\dfrac{${num('SSres')}}{${num('dfres')}}=${num('MSres')}`);
+  h+=L('F-ratio',`F=\\dfrac{MS_M}{MS_{res}}=\\dfrac{${num('MSM')}}{${num('MSres')}}=${num('F')}\\qquad\\text{compare with critical }F_{1,${S.dfres}}=${num('crit')}`);
+  if(nudged)h+=L('Your nudged line',`SS_{res}(b)=SS_{res}+S_{xx}(b-b_1)^2=${f3(S.SSres)}+${f3(S.Sxx)}\\times(${f3(u-S.b1)})^2=${f3(SSu)}`);
+  $('formulas').innerHTML=h;
+}
+
+function drawScatter({S,X,Y,u,u0,SSu,nudged}){
+  const W=640,H=380,m={l:54,r:14,t:12,b:40};
+  let x0=Math.min(...X),x1=Math.max(...X),y0=Math.min(...Y),y1=Math.max(...Y);
+  const padx=(x1-x0)*0.06||1;x0-=padx;x1+=padx;
+  const L=x=>S.b0+S.b1*x,U=x=>u0+u*x;
+  [L(x0),L(x1),U(x0),U(x1),S.yb].forEach(v=>{if(v<y0)y0=v;if(v>y1)y1=v});
+  const pady=(y1-y0)*0.06||1;y0-=pady;y1+=pady;
+  const px=x=>m.l+(x-x0)/(x1-x0)*(W-m.l-m.r),py=y=>H-m.b-(y-y0)/(y1-y0)*(H-m.t-m.b);
+  let s='';
+  ticks(x0,x1,7).forEach(v=>{s+=`<line class="grid" x1="${px(v)}" y1="${m.t}" x2="${px(v)}" y2="${H-m.b}"/><text class="tk" x="${px(v)}" y="${H-m.b+16}" text-anchor="middle">${ft(v)}</text>`});
+  ticks(y0,y1,6).forEach(v=>{s+=`<line class="grid" x1="${m.l}" y1="${py(v)}" x2="${W-m.r}" y2="${py(v)}"/><text class="tk" x="${m.l-6}" y="${py(v)+4}" text-anchor="end">${ft(v)}</text>`});
+  s+=`<text class="ax" x="${(m.l+W-m.r)/2}" y="${H-6}" text-anchor="middle">X</text><text class="ax" transform="translate(14 ${(m.t+H-m.b)/2}) rotate(-90)" text-anchor="middle">Y</text>`;
+  if($('tNull').checked)s+=`<line x1="${px(x0)}" y1="${py(S.yb)}" x2="${px(x1)}" y2="${py(S.yb)}" stroke="var(--gray)" stroke-width="1.5" stroke-dasharray="6 4"/>`;
+  const drawn=nudged?U:L;
+  if($('tRes').checked)X.forEach((x,i)=>{s+=`<line x1="${px(x)}" y1="${py(Y[i])}" x2="${px(x)}" y2="${py(drawn(x))}" stroke="var(--red)" stroke-width="1.4" opacity=".75"/>`});
+  if(nudged)s+=`<line x1="${px(x0)}" y1="${py(L(x0))}" x2="${px(x1)}" y2="${py(L(x1))}" stroke="var(--blue)" stroke-width="1.5" stroke-dasharray="4 4" opacity=".6"/>`;
+  s+=`<line x1="${px(x0)}" y1="${py(drawn(x0))}" x2="${px(x1)}" y2="${py(drawn(x1))}" stroke="${nudged?'var(--amber)':'var(--blue)'}" stroke-width="2.5"/>`;
+  X.forEach((x,i)=>{s+=`<circle cx="${px(x)}" cy="${py(Y[i])}" r="3.6" fill="var(--ink)" opacity=".78"/>`});
+  s+=`<circle cx="${px(S.xb)}" cy="${py(S.yb)}" r="7" fill="none" stroke="var(--ink)" stroke-width="1.6"/>`;
+  $('scatter').innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Scatter plot with fitted line">${s}</svg>`;
+  const chip=(k,lbl,v,f)=>{const o=pinned?pinned[k]:undefined;const was=(o!==undefined&&isFinite(o)&&isFinite(v)&&Math.abs(o-v)>1e-9*Math.max(1,Math.abs(o)))?`<em style="font-style:normal;font-size:11px;color:var(--amber)"> was ${f(o)}</em>`:'';return `<span style="display:inline-block;background:var(--soft);border-radius:8px;padding:3px 9px;margin:0 6px 6px 0;font-size:13px"><span style="color:var(--mut)">${tx(lbl)}</span> <b style="font-variant-numeric:tabular-nums">${f(v)}</b>${was}</span>`};
+  const chips=`<div style="margin:6px 0 4px">${chip('r','r',S.r,f3)}${chip('b1','b_1',S.b1,f3)}${chip('R2','R^2',S.R2,f3)}${chip('F','F',S.F,f3)}${chip('p','p',S.p,fp)}${chip('SSres','SS_{res}',S.SSres,f3)}</div>`;
+  $('scatterNote').innerHTML=chips+(nudged?`Amber = your nudged line (slope ${f3(u)}). SS of residuals for it is <b>${f3(SSu)}</b> vs <b>${f3(S.SSres)}</b> for the best fit (dashed blue).`:`Fitted line: Ŷ = ${f3(S.b0)} + ${f3(S.b1)}·X`);
+}
+
+function drawDesc({S}){
+  $('desc').innerHTML=rowsHTML([
+    ['n','n',S.n,v=>v.toFixed(0)],['xb','\\bar X\\ \\text{(mean of }X\\text{)}',S.xb,f3],['sX','s_X\\ \\text{(SD of }X\\text{)}',S.sX,f3],
+    ['yb','\\bar Y\\ \\text{(mean of }Y\\text{)}',S.yb,f3],['sY','s_Y\\ \\text{(SD of }Y\\text{)}',S.sY,f3],['r','r\\ \\text{(correlation)}',S.r,f3]
+  ]);
+  $('reg').innerHTML=rowsHTML([['b1','b_1\\ \\text{(slope)}',S.b1,f3],['b0','b_0\\ \\text{(intercept)}',S.b0,f3],['R2','R^2\\ \\text{(variance explained)}',S.R2,f3]]);
+}
+
+function drawAnova({S}){
+  const a=S.SSM/S.SST*100,b=100-a;
+  $('ssbar').innerHTML=`<div style="width:${a}%;background:var(--blue)">${a>12?'SS_M':''}</div><div style="width:${b}%;background:var(--red)">${b>12?'SS_res':''}</div>`;
+  $('anova').innerHTML=rowsHTML([
+    ['SST','SS_T\\ \\text{(total)}',S.SST,f3],['SSM','SS_M\\ \\text{(model)}',S.SSM,f3],['SSres','SS_{res}\\ \\text{(residual)}',S.SSres,f3],
+    ['dfres','df_{res}=n-2',S.dfres,v=>v.toFixed(0)],['MSM','MS_M=SS_M/1',S.MSM,f3],['MSres','MS_{res}=SS_{res}/df_{res}',S.MSres,f3],
+    ['F','F=MS_M/MS_{res}',S.F,f3],['crit','\\text{Critical }F\\ (\\alpha=.05)',S.crit,f3],['p','p\\text{-value}',S.p,fp]
+  ])+`<div class="row"><span>Decision</span><b><span class="pill ${S.p<0.05?'ok':'no'}">${S.p<0.05?'significant':'not significant'}</span></b></div>`;
+  const z=v=>Math.abs(v)<1e-6?'≈ 0':v.toExponential(1);
+  $('props').innerHTML=
+    `<div class="row"><span>${tx('\\sum e_i')}</span><b>${z(S.sumE)}</b></div><div class="row"><span>${tx('\\sum x_ie_i')}</span><b>${z(S.sumXE)}</b></div><div class="row"><span>${tx('\\sum \\hat y_ie_i')}</span><b>${z(S.sumYhE)}</b></div>`+
+    `<div class="sub2" style="margin-top:4px">These stay at 0 for the best-fit line no matter what you change (tiny rounding aside).</div>`;
+}
+
+function drawF({S}){
+  const W=640,H=260,m={l:44,r:14,t:14,b:38},d2=S.dfres;
+  const xmax=Math.max(S.crit*3,6);
+  const N=240;let ymax=0;
+  for(let i=1;i<=N;i++){ymax=Math.max(ymax,Fpdf(xmax*i/N,1,d2))}
+  ymax=Math.min(Math.max(ymax,0.05),0.9)*1.08;
+  const px=x=>m.l+x/xmax*(W-m.l-m.r),py=y=>H-m.b-Math.min(y,ymax)/ymax*(H-m.t-m.b);
+  let s='';
+  ticks(0,xmax,8).forEach(v=>{s+=`<line class="grid" x1="${px(v)}" y1="${m.t}" x2="${px(v)}" y2="${H-m.b}"/><text class="tk" x="${px(v)}" y="${H-m.b+15}" text-anchor="middle">${ft(v)}</text>`});
+  if(perm){
+    const bins=40,w=xmax/bins,cnt=new Array(bins).fill(0);
+    perm.forEach(f=>{const k=Math.floor(f/w);if(k<bins)cnt[k]++});
+    cnt.forEach((c,i)=>{const d=c/(perm.length*w);if(d>0)s+=`<rect x="${px(i*w)+.5}" y="${py(d)}" width="${px(w)-px(0)-1}" height="${H-m.b-py(d)}" fill="var(--gray)" opacity=".38"/>`});
+  }
+  const tail=(a,col,op)=>{let d=`M${px(a)},${py(0)}`;for(let x=a;x<=xmax+1e-9;x+=xmax/300)d+=`L${px(x).toFixed(1)},${py(Fpdf(Math.max(x,1e-6),1,d2)).toFixed(1)}`;return`<path d="${d}L${px(xmax)},${py(0)}Z" fill="${col}" opacity="${op}"/>`};
+  const Fx=Math.min(S.F,xmax*0.985);
+  s+=tail(Fx,'var(--blue)',.3)+tail(S.crit,'var(--red)',.25);
+  let d='';for(let i=1;i<=N;i++){const x=xmax*i/N;d+=(d?'L':'M')+px(x).toFixed(1)+','+py(Fpdf(x,1,d2)).toFixed(1)}
+  s+=`<path d="${d}" fill="none" stroke="var(--ink)" stroke-width="2"/>`;
+  s+=`<line x1="${px(0)}" y1="${H-m.b}" x2="${px(xmax)}" y2="${H-m.b}" stroke="var(--mut)" stroke-width=".8"/>`;
+  s+=`<line x1="${px(S.crit)}" y1="${m.t}" x2="${px(S.crit)}" y2="${H-m.b}" stroke="var(--red)" stroke-width="2" stroke-dasharray="5 3"/>`;
+  s+=`<line x1="${px(Fx)}" y1="${m.t+22}" x2="${px(Fx)}" y2="${H-m.b}" stroke="var(--blue)" stroke-width="2.5"/>`;
+  const rightC=S.crit>xmax*0.55,rightF=Fx>xmax*0.55;
+  s+=`<text x="${px(S.crit)+(rightC?-6:6)}" y="${m.t+10}" text-anchor="${rightC?'end':'start'}" style="fill:var(--red);font-size:12px">critical ${f3(S.crit)}</text>`;
+  s+=`<text x="${px(Fx)+(rightF?-6:6)}" y="${m.t+32}" text-anchor="${rightF?'end':'start'}" style="fill:var(--blue);font-size:12px">your F ${f3(S.F)}${S.F>xmax?' →':''}</text>`;
+  s+=`<text class="ax" x="${(m.l+W-m.r)/2}" y="${H-4}" text-anchor="middle">F-ratio</text>`;
+  $('fplot').innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="F distribution">${s}</svg>`;
+  $('fnote').innerHTML=`F(1, ${d2}) = ${f3(S.F)}, p = ${fp(S.p)}.`+(perm?` Permutation p = <b>${fp((perm.filter(f=>f>=S.F).length+1)/(perm.length+1))}</b> from ${perm.length} shuffles (gray bars).`:` Click <i>Permutation test</i> to build the null by shuffling Y.`);
+}
+
+function drawParab({S,u,SSu,delta,nudged}){
+  const W=640,H=260,m={l:50,r:14,t:16,b:38};
+  const lo=S.b1-delta,hi=S.b1+delta,ss=b=>S.SSres+S.Sxx*(b-S.b1)*(b-S.b1),ymax=ss(lo)*1.05;
+  const px=b=>m.l+(b-lo)/(hi-lo)*(W-m.l-m.r),py=v=>H-m.b-v/ymax*(H-m.t-m.b);
+  let s='';
+  ticks(lo,hi,6).forEach(v=>{s+=`<line class="grid" x1="${px(v)}" y1="${m.t}" x2="${px(v)}" y2="${H-m.b}"/><text class="tk" x="${px(v)}" y="${H-m.b+15}" text-anchor="middle">${ft(v)}</text>`});
+  ticks(0,ymax,5).forEach(v=>{s+=`<line class="grid" x1="${m.l}" y1="${py(v)}" x2="${W-m.r}" y2="${py(v)}"/><text class="tk" x="${m.l-6}" y="${py(v)+4}" text-anchor="end">${v>=1000?Math.round(v):ft(v)}</text>`});
+  let d='';for(let i=0;i<=80;i++){const b=lo+(hi-lo)*i/80;d+=(d?'L':'M')+px(b).toFixed(1)+','+py(ss(b)).toFixed(1)}
+  s+=`<path d="${d}" fill="none" stroke="var(--blue)" stroke-width="2.5"/>`;
+  s+=`<line x1="${px(S.b1)}" y1="${m.t}" x2="${px(S.b1)}" y2="${H-m.b}" stroke="var(--green)" stroke-width="1.4" stroke-dasharray="4 3"/>`;
+  s+=`<text x="${px(S.b1)+6}" y="${m.t+10}" style="fill:var(--green);font-size:12px">best fit b₁ = ${f3(S.b1)}</text>`;
+  const tw=delta*0.55,dv=2*S.Sxx*(u-S.b1);
+  s+=`<line x1="${px(u-tw)}" y1="${py(SSu-dv*tw)}" x2="${px(u+tw)}" y2="${py(SSu+dv*tw)}" stroke="var(--amber)" stroke-width="2"/>`;
+  s+=`<circle cx="${px(u)}" cy="${py(SSu)}" r="5.5" fill="var(--amber)"/>`;
+  s+=`<text class="ax" x="${(m.l+W-m.r)/2}" y="${H-4}" text-anchor="middle">slope b₁ (with b₀ = Ȳ − b₁X̄)</text><text class="ax" transform="translate(12 ${(m.t+H-m.b)/2}) rotate(-90)" text-anchor="middle">SS_res</text>`;
+  $('parab').innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="SS residual against slope">${s}</svg>`;
+  $('pnote').innerHTML=`At slope ${f3(u)}: SS_res = <b>${f3(SSu)}</b>, slope of the curve (derivative) = <b>${Math.abs(dv)<1e-9?'0':f3(dv)}</b>${nudged?'':' — flat at the bottom'}.`;
+}
+
+$('bNew').addEventListener('click',()=>{seed=(seed*1103515245+12345)%2147483647;regen();perm=null;update()});
+$('bPin').addEventListener('click',()=>{
+  if(pinned){pinned=null;$('bPin').textContent='Pin baseline'}
+  else{const S=window.__last.S;pinned={n:S.n,xb:S.xb,sX:S.sX,yb:S.yb,sY:S.sY,r:S.r,b1:S.b1,b0:S.b0,R2:S.R2,SST:S.SST,SSM:S.SSM,SSres:S.SSres,dfres:S.dfres,MSM:S.MSM,MSres:S.MSres,F:S.F,crit:S.crit,p:S.p};$('bPin').textContent='Clear baseline'}
+  update()});
+$('bPerm').addEventListener('click',()=>{const{X,Y}=window.__last;perm=permF(X,Y,2000,Math.random);update()});
+$('bReset').addEventListener('click',()=>{SL.forEach(s=>{if(s[0]!=='grp')$(s[0]).value=s[5]});seed=7;regen();perm=null;pinned=null;prevSnap=null;$('bPin').textContent='Pin baseline';update()});
+['tRes','tNull'].forEach(id=>$(id).addEventListener('change',update));
+regen();update();
+</script>
+</body>
+</html>
