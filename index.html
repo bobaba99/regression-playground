@@ -63,10 +63,26 @@ pre.sub{font:12.5px/1.65 ui-monospace,SFMono-Regular,Menlo,monospace;background:
 .pill{display:inline-block;border-radius:6px;padding:1px 8px;font-size:12px;font-weight:600}
 .ok{background:rgba(26,127,75,.15);color:var(--green)}
 .no{background:rgba(209,52,75,.14);color:var(--red)}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin:0 0 12px;overflow-x:auto}
+.tab{border:0;border-bottom:2px solid transparent;border-radius:0;background:none;padding:8px 14px;font-size:14px;color:var(--mut);white-space:nowrap;margin-bottom:-1px}
+.tab:hover{background:none;color:var(--ink)}
+.tab[aria-selected=true]{color:var(--ink);border-bottom-color:var(--blue);font-weight:600}
+[hidden]{display:none!important}
+#sprayCv{width:100%;aspect-ratio:16/10;display:block;touch-action:none;cursor:none;background:var(--card);border-radius:8px;border:1px solid var(--line)}
+.seg{display:flex;gap:0;margin:6px 0}
+.seg button{flex:1;border-radius:0}
+.seg button:first-child{border-radius:8px 0 0 8px}
+.seg button:last-child{border-radius:0 8px 8px 0;border-left:0}
+.seg button[aria-pressed=true]{background:var(--blue);color:#fff;border-color:var(--blue)}
 </style>
 </head>
 <body>
 <div class="wrap">
+<div class="tabs" role="tablist" aria-label="Tools">
+<button class="tab" role="tab" id="tabB-sim" data-tab="sim" aria-selected="true">Sample size and statistics</button>
+<button class="tab" role="tab" id="tabB-spray" data-tab="spray" aria-selected="false">Spray-paint regression</button>
+</div>
+<section id="tab-sim" role="tabpanel" aria-labelledby="tabB-sim">
 <h1>Regression Playground</h1>
 <p class="sub">Descriptive stats → best-fit line → sum of squares → F. Move any slider and watch every number and plot update together. Pin a baseline to see exactly what changed.</p>
 <div class="layout">
@@ -131,6 +147,44 @@ pre.sub{font:12.5px/1.65 ui-monospace,SFMono-Regular,Menlo,monospace;background:
 </div>
 </div>
 </div>
+</section>
+
+<section id="tab-spray" role="tabpanel" aria-labelledby="tabB-spray" hidden>
+<h1>Spray-paint regression</h1>
+<p class="sub">Paint data points with a spray can and watch the least-squares line, r and R² update live. Draw weird patterns and see what the line does with them.</p>
+<div class="layout">
+
+<div class="card ctrl">
+<div class="grp">Tool</div>
+<div class="seg"><button id="spSprayB" aria-pressed="true">Spray</button><button id="spEraseB" aria-pressed="false">Erase</button></div>
+<div class="grp">Brush</div>
+<div class="sl"><label for="spSize">Brush size (radius)<b id="v_spSize">40</b></label><input type="range" id="spSize" min="8" max="140" step="1" value="40"></div>
+<div class="sl"><label for="spSpread">Spread (tight → even)<b id="v_spSpread">0.60</b></label><input type="range" id="spSpread" min="0.1" max="1.5" step="0.05" value="0.6"></div>
+<div class="sl"><label for="spDens">Density (points per second)<b id="v_spDens">80</b></label><input type="range" id="spDens" min="5" max="400" step="5" value="80"></div>
+<div class="grp">Show</div>
+<label class="chk"><input type="checkbox" id="spRes"> residuals</label>
+<label class="chk"><input type="checkbox" id="spNull" checked> mean of Y (null model)</label>
+<label class="chk"><input type="checkbox" id="spRev"> X-on-Y line (regress X on Y)</label>
+<div class="grp">Start from a pattern</div>
+<div class="btns" id="spPresets" style="margin-top:4px"></div>
+<div class="btns"><button id="spUndo">Undo</button><button id="spClear">Clear</button></div>
+</div>
+
+<div class="right">
+<div class="card">
+<h2>Draw here</h2>
+<p class="cap">Press and drag to spray. Hold still to pile points up. Erase mode removes points under the brush. Blue is the least-squares line and always passes through the ring at (X̄, Ȳ).</p>
+<canvas id="sprayCv" role="img" aria-label="Drawing canvas: spray data points and see the fitted regression line"></canvas>
+</div>
+<div class="card">
+<h2>Live fit</h2>
+<div id="spFit" class="sub2"></div>
+<div id="spRows"></div>
+</div>
+</div>
+
+</div>
+</section>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
@@ -358,6 +412,167 @@ $('bPerm').addEventListener('click',()=>{const{X,Y}=window.__last;perm=permF(X,Y
 $('bReset').addEventListener('click',()=>{SL.forEach(s=>{if(s[0]!=='grp')$(s[0]).value=s[5]});seed=7;regen();perm=null;pinned=null;prevSnap=null;$('bPin').textContent='Pin baseline';update()});
 ['tRes','tNull'].forEach(id=>$(id).addEventListener('change',update));
 regen();update();
+</script>
+<script>
+(function(){
+  const tabs=[...document.querySelectorAll('.tab')];
+  function setTab(name){
+    tabs.forEach(b=>{const on=b.dataset.tab===name;b.setAttribute('aria-selected',on);b.tabIndex=on?0:-1;$('tab-'+b.dataset.tab).hidden=!on});
+    try{history.replaceState(null,'','#'+name)}catch(e){}
+  }
+  tabs.forEach((b,i)=>{
+    b.addEventListener('click',()=>setTab(b.dataset.tab));
+    b.addEventListener('keydown',e=>{
+      if(e.key!=='ArrowRight'&&e.key!=='ArrowLeft')return;
+      const t=tabs[(i+(e.key==='ArrowRight'?1:tabs.length-1))%tabs.length];setTab(t.dataset.tab);t.focus()});
+  });
+  setTab(location.hash==='#spray'?'spray':'sim');
+})();
+
+(function(){
+  const cv=$('sprayCv'),ctx=cv.getContext('2d');
+  const M={l:44,r:12,t:10,b:32};
+  let pts=[],hist=[],down=false,mx=null,my=null,erase=false,dirty=true,last=0,carry=0,W=0,H=0;
+  const val=id=>parseFloat($(id).value);
+  const X=x=>M.l+x/100*(W-M.l-M.r), Y=y=>H-M.b-y/100*(H-M.t-M.b);
+  const iX=px=>(px-M.l)/(W-M.l-M.r)*100, iY=py=>(H-M.b-py)/(H-M.t-M.b)*100;
+  const clamp=v=>Math.max(0,Math.min(100,v));
+
+  function resize(){
+    const r=cv.getBoundingClientRect();if(!r.width)return;
+    const dpr=window.devicePixelRatio||1;W=r.width;H=r.height;
+    cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);dirty=true;
+  }
+  new ResizeObserver(resize).observe(cv);
+
+  function snapshot(){hist.push(pts.slice());if(hist.length>60)hist.shift()}
+  function emit(n){
+    const R=val('spSize'),sd=val('spSpread')*R;
+    for(let k=0;k<n;k++){
+      let dx,dy,t=0;
+      do{dx=gauss(Math.random)*sd;dy=gauss(Math.random)*sd;t++}while(dx*dx+dy*dy>R*R&&t<20);
+      if(dx*dx+dy*dy>R*R)continue;
+      const x=iX(mx+dx),y=iY(my+dy);
+      if(x>=0&&x<=100&&y>=0&&y<=100)pts.push([x,y]);
+    }
+  }
+  function wipe(){
+    const R=val('spSize'),R2=R*R;
+    pts=pts.filter(p=>{const dx=X(p[0])-mx,dy=Y(p[1])-my;return dx*dx+dy*dy>R2});
+  }
+  function loc(e){const r=cv.getBoundingClientRect();mx=e.clientX-r.left;my=e.clientY-r.top;dirty=true}
+
+  cv.addEventListener('pointerdown',e=>{
+    cv.setPointerCapture(e.pointerId);loc(e);snapshot();down=true;carry=1;
+  });
+  cv.addEventListener('pointermove',loc);
+  const up=()=>{down=false};
+  cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
+  cv.addEventListener('pointerleave',()=>{if(!down){mx=null;dirty=true}});
+
+  function setMode(er){
+    erase=er;$('spSprayB').setAttribute('aria-pressed',!er);$('spEraseB').setAttribute('aria-pressed',er);
+  }
+  $('spSprayB').addEventListener('click',()=>setMode(false));
+  $('spEraseB').addEventListener('click',()=>setMode(true));
+  ['spSize','spSpread','spDens'].forEach(id=>$(id).addEventListener('input',()=>{
+    const s=$(id);$('v_'+id).textContent=(+s.value).toFixed(decOf(s.step));dirty=true}));
+  ['spRes','spNull','spRev'].forEach(id=>$(id).addEventListener('change',()=>{dirty=true}));
+  $('spUndo').addEventListener('click',()=>{if(hist.length){pts=hist.pop();dirty=true}});
+  $('spClear').addEventListener('click',()=>{if(pts.length){snapshot();pts=[];dirty=true}});
+  document.addEventListener('keydown',e=>{
+    if((e.metaKey||e.ctrlKey)&&e.key==='z'&&!$('tab-spray').hidden){e.preventDefault();$('spUndo').click()}});
+
+  const rnd=mulberry(11),g=()=>gauss(rnd),u=(a,b)=>a+(b-a)*rnd();
+  const make=(n,f)=>Array.from({length:n},f).map(p=>[clamp(p[0]),clamp(p[1])]);
+  const PRESETS={
+    'Blob':()=>make(300,()=>[50+14*g(),50+14*g()]),
+    'U shape':()=>make(300,()=>{const x=u(10,90);return[x,85-(x-50)*(x-50)/32+5*g()]}),
+    'Two clusters':()=>make(300,(_,i)=>i%2?[25+7*g(),25+7*g()]:[75+7*g(),75+7*g()]),
+    'One outlier':()=>make(200,(_,i)=>{if(i===199)return[92,8];const x=u(15,60);return[x,20+0.8*x+6*g()]}),
+    'Funnel':()=>make(300,()=>{const x=u(5,95);return[x,50+0.3*(x-50)+(x/7)*g()]}),
+    'Ring':()=>make(300,()=>{const a=u(0,6.283);return[50+32*Math.cos(a)+2*g(),50+32*Math.sin(a)+2*g()]}),
+    "Simpson's paradox":()=>make(360,(_,i)=>{const k=i%3,cx=[25,50,75][k],cy=[25,50,75][k]+8;const x=cx+9*g();return[x,cy-0.9*(x-cx)+3*g()]})
+  };
+  Object.keys(PRESETS).forEach(name=>{
+    const b=document.createElement('button');b.textContent=name;
+    b.addEventListener('click',()=>{snapshot();pts=PRESETS[name]();dirty=true});
+    $('spPresets').appendChild(b);
+  });
+
+  function draw(){
+    if(!W)return;
+    const cs=getComputedStyle(document.documentElement),c=n=>cs.getPropertyValue(n).trim();
+    ctx.clearRect(0,0,W,H);
+    ctx.font='11px -apple-system,sans-serif';
+    ctx.strokeStyle=c('--line');ctx.fillStyle=c('--mut');ctx.lineWidth=.6;
+    for(let v=0;v<=100;v+=20){
+      ctx.beginPath();ctx.moveTo(X(v),Y(0));ctx.lineTo(X(v),Y(100));ctx.stroke();
+      ctx.beginPath();ctx.moveTo(X(0),Y(v));ctx.lineTo(X(100),Y(v));ctx.stroke();
+      ctx.textAlign='center';ctx.fillText(v,X(v),H-M.b+15);
+      ctx.textAlign='right';ctx.fillText(v,M.l-6,Y(v)+4);
+    }
+    ctx.textAlign='center';ctx.fillText('X',(M.l+W-M.r)/2,H-4);
+    ctx.save();ctx.translate(12,(M.t+H-M.b)/2);ctx.rotate(-Math.PI/2);ctx.fillText('Y',0,0);ctx.restore();
+
+    const n=pts.length;let S=null;
+    if(n>=3){
+      const xs=pts.map(p=>p[0]),ys=pts.map(p=>p[1]);
+      const s=regress(xs,ys);if(s.Sxx>1e-9&&s.Syy>1e-9)S=s;
+    }
+    ctx.save();ctx.beginPath();ctx.rect(M.l,M.t,W-M.l-M.r,H-M.t-M.b);ctx.clip();
+    if(S){
+      const line=(x0,y0,x1,y1,col,w,dash)=>{ctx.strokeStyle=col;ctx.lineWidth=w;ctx.setLineDash(dash||[]);ctx.beginPath();ctx.moveTo(X(x0),Y(y0));ctx.lineTo(X(x1),Y(y1));ctx.stroke();ctx.setLineDash([])};
+      if($('spNull').checked)line(0,S.yb,100,S.yb,c('--gray'),1.5,[6,4]);
+      if($('spRes').checked){
+        ctx.strokeStyle=c('--red');ctx.globalAlpha=.45;ctx.lineWidth=1;ctx.beginPath();
+        pts.forEach(p=>{ctx.moveTo(X(p[0]),Y(p[1]));ctx.lineTo(X(p[0]),Y(S.b0+S.b1*p[0]))});
+        ctx.stroke();ctx.globalAlpha=1;
+      }
+      if($('spRev').checked){
+        const r=regress(pts.map(p=>p[1]),pts.map(p=>p[0]));
+        line(r.b0,0,r.b0+r.b1*100,100,c('--green'),2,[]);
+      }
+      line(0,S.b0,100,S.b0+S.b1*100,c('--blue'),2.5);
+    }
+    ctx.fillStyle=c('--ink');ctx.globalAlpha=.7;
+    ctx.beginPath();
+    pts.forEach(p=>{const px=X(p[0]),py=Y(p[1]);ctx.moveTo(px+2.6,py);ctx.arc(px,py,2.6,0,6.2832)});
+    ctx.fill();ctx.globalAlpha=1;
+    if(S){ctx.strokeStyle=c('--ink');ctx.lineWidth=1.6;ctx.beginPath();ctx.arc(X(S.xb),Y(S.yb),7,0,6.2832);ctx.stroke()}
+    ctx.restore();
+    if(mx!==null){
+      const R=val('spSize');
+      ctx.strokeStyle=erase?c('--red'):c('--amber');ctx.lineWidth=1.5;ctx.setLineDash([4,3]);
+      ctx.beginPath();ctx.arc(mx,my,R,0,6.2832);ctx.stroke();ctx.setLineDash([]);
+      if(!erase){ctx.beginPath();ctx.arc(mx,my,val('spSpread')*R,0,6.2832);ctx.globalAlpha=.4;ctx.stroke();ctx.globalAlpha=1}
+    }
+    report(S,n);
+  }
+
+  function report(S,n){
+    if(!S){
+      $('spFit').textContent=n<3?`n = ${n}. Paint at least 3 points to fit a line.`:'Points need to vary in both X and Y to fit a line.';
+      $('spRows').innerHTML='';return;
+    }
+    $('spFit').innerHTML=`Fitted line: Ŷ = ${f3(S.b0)} ${S.b1<0?'−':'+'} ${f3(Math.abs(S.b1))}·X`;
+    const r=(k,v)=>`<div class="row"><span>${k}</span><b>${v}</b></div>`;
+    $('spRows').innerHTML=r('n',n)+r('r (correlation)',f3(S.r))+r('R² (variance explained)',f3(S.R2))+
+      r('b₁ (slope)',f3(S.b1))+r('b₀ (intercept)',f3(S.b0))+r('F(1, '+S.dfres+')',f3(S.F))+r('p-value',fp(S.p));
+  }
+
+  function tick(t){
+    if(down&&mx!==null){
+      if(erase)wipe();
+      else{carry+=val('spDens')*Math.min(.05,(t-last)/1000);const k=Math.floor(carry);carry-=k;if(k>0)emit(k)}
+      dirty=true;
+    }
+    last=t;
+    if(dirty){dirty=false;draw()}
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+})();
 </script>
 </body>
 </html>
