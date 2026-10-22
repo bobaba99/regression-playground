@@ -74,6 +74,69 @@ pre.sub{font:12.5px/1.65 ui-monospace,SFMono-Regular,Menlo,monospace;background:
 .seg button:first-child{border-radius:8px 0 0 8px}
 .seg button:last-child{border-radius:0 8px 8px 0;border-left:0}
 .seg button[aria-pressed=true]{background:var(--blue);color:#fff;border-color:var(--blue)}
+select{font:inherit;font-size:13px;width:100%;padding:5px 8px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink)}
+.pqh{font-size:13px;color:var(--mut);margin-bottom:4px}
+.tag{display:inline-block;background:var(--soft);border-radius:6px;padding:1px 7px;font-weight:600;color:var(--ink);margin-right:6px}
+.pqp p{margin:6px 0}
+.pqp .katex-display,.given .katex-display{overflow-x:auto;overflow-y:hidden;padding:2px 0}
+table.ct{border-collapse:collapse;font-size:13.5px;margin:6px 0;max-width:100%;display:block;overflow-x:auto}
+table.ct th,table.ct td{border-bottom:1px solid var(--line);padding:4px 10px;text-align:left;white-space:nowrap}
+table.ct th{font-weight:600;color:var(--mut);font-size:12px}
+.flds{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr));gap:8px 12px;margin:10px 0}
+.fld{display:flex;flex-direction:column;gap:4px;font-size:13px;border-radius:8px;padding:5px 7px;border:1px solid transparent;min-width:0}
+.fld.wide{grid-column:1/-1}
+fieldset.fld{margin:0}
+fieldset.fld legend{padding:0 2px}
+.fld input[type=text]{font:inherit;font-size:14px;padding:5px 8px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);width:100%}
+.opt{display:flex;gap:8px;align-items:baseline;padding:3px 0;cursor:pointer;overflow-x:auto}
+.fld[data-state=ok]{border-color:var(--green);background:rgba(26,127,75,.07)}
+.fld[data-state=bad],.fld[data-state=unread]{border-color:var(--red);background:rgba(209,52,75,.06)}
+.fld[data-state]::after{font-size:12px;font-weight:600}
+.fld[data-state=ok]::after{content:"✓ correct";color:var(--green)}
+.fld[data-state=bad]::after{content:"✗ not yet";color:var(--red)}
+.fld[data-state=unread]::after{content:"✗ not a number (try 0.25 or -1.5)";color:var(--red)}
+.st .katex-display{overflow-x:auto;overflow-y:hidden;text-align:left}
+.st{padding:6px 0;border-bottom:1px dotted var(--line)}
+.st .why{font-size:13px;color:var(--mut)}
+.ans{font-size:13.5px;padding:2px 0;display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline}
+.keyp{border-top:1px solid var(--line);margin-top:12px;padding-top:6px}
+.thm{display:flex;flex-direction:column;gap:5px}
+.thm button{text-align:left}
+.thm button[aria-pressed=true]{background:var(--blue);color:#fff;border-color:var(--blue)}
+.vig{background:var(--soft);border-radius:8px;padding:6px 12px;margin:6px 0}
+.vig p{margin:4px 0}
+.vars{display:flex;flex-wrap:wrap;gap:2px 16px;font-size:13px;color:var(--mut)}
+.task{border-left:3px solid var(--blue);border-radius:0;padding-left:9px;font-weight:600}
+.part{border-top:1px solid var(--line);margin-top:14px;padding-top:6px}
+.part h3{font-size:15px;font-weight:600;margin:6px 0 2px}
+.bank{position:sticky;top:0;z-index:5;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:6px 8px;margin:10px 0;max-height:40vh;overflow:auto}
+.bankh{font-size:12px;color:var(--mut);margin:2px 0 4px}
+.tiles{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px}
+.tile{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;padding:3px 9px;min-width:44px;min-height:40px;cursor:grab;touch-action:manipulation;line-height:1.2}
+.tile .tv{font-size:11.5px;color:var(--mut);font-variant-numeric:tabular-nums}
+.tile .tn{font-size:10.5px;color:var(--mut)}
+.tile.op{font-size:17px;min-width:42px}
+.tile.box{border-style:dashed}
+.slotw{min-width:0}
+.slot{min-height:42px;border:1px dashed var(--mut);border-radius:8px;padding:6px 8px;cursor:pointer;overflow-x:auto;display:flex;align-items:center;background:var(--card)}
+.slot.active{border:2px solid var(--blue);background:rgba(31,111,235,.06)}
+.slot.over{background:rgba(31,111,235,.14)}
+.srow{display:flex;justify-content:space-between;align-items:center;gap:6px}
+.sval{font-size:12.5px;color:var(--mut);font-variant-numeric:tabular-nums}
+.sbtn{display:flex;gap:4px}
+.sbtn button{padding:2px 8px;font-size:12px}
+.slab{font-size:13px}
+.fmsg{font-size:12.5px;color:var(--red)}
+table.dt td,table.dt th{text-align:center}
+table.dt td:first-child,table.dt th:first-child{text-align:left}
+.dt select{width:auto;min-width:96px}
+.dc{min-width:42px;min-height:34px;font-weight:600}
+.dc[data-v="1"]{background:rgba(31,111,235,.14)}
+.symrow{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.sym{font:12.5px ui-monospace,SFMono-Regular,Menlo,monospace;padding:3px 7px}
+.prev{min-height:26px;overflow-x:auto;padding:2px 0}
+.tin{font-family:ui-monospace,SFMono-Regular,Menlo,monospace!important}
+.sol{border-top:1px solid var(--line);margin-top:12px;padding-top:4px}
 </style>
 </head>
 <body>
@@ -81,6 +144,7 @@ pre.sub{font:12.5px/1.65 ui-monospace,SFMono-Regular,Menlo,monospace;background:
 <div class="tabs" role="tablist" aria-label="Tools">
 <button class="tab" role="tab" id="tabB-sim" data-tab="sim" aria-selected="true">Sample size and statistics</button>
 <button class="tab" role="tab" id="tabB-spray" data-tab="spray" aria-selected="false">Spray-paint regression</button>
+<button class="tab" role="tab" id="tabB-practice" data-tab="practice" aria-selected="false">Practice: formulas and reference groups</button>
 </div>
 <section id="tab-sim" role="tabpanel" aria-labelledby="tabB-sim">
 <h1>Regression Playground</h1>
@@ -184,6 +248,23 @@ pre.sub{font:12.5px/1.65 ui-monospace,SFMono-Regular,Menlo,monospace;background:
 </div>
 
 </div>
+</section>
+
+<section id="tab-practice" role="tabpanel" aria-labelledby="tabB-practice" hidden>
+<h1>Practice: formulas and reference groups</h1>
+<p class="sub">Write the model, code the dummies, and rebuild the coefficients by hand. Formulas are typed; numbers are built from tiles. Every question is a new study with new numbers.</p>
+<div class="layout">
+<div class="card ctrl">
+<div class="grp">Theme</div>
+<div class="thm" id="prThemes" role="group" aria-label="Theme"></div>
+<div class="grp">Model</div>
+<label class="chk"><input type="checkbox" id="prInter" checked> Include an interaction</label>
+<p class="sub2">The study and the number of groups change with every question.</p>
+<div class="btns"><button id="prNew">New question</button></div>
+</div>
+<div class="right" id="prMain"></div>
+</div>
+<pre id="prSelftest" class="sub" hidden></pre>
 </section>
 </div>
 
@@ -426,7 +507,8 @@ regen();update();
       if(e.key!=='ArrowRight'&&e.key!=='ArrowLeft')return;
       const t=tabs[(i+(e.key==='ArrowRight'?1:tabs.length-1))%tabs.length];setTab(t.dataset.tab);t.focus()});
   });
-  setTab(location.hash==='#spray'?'spray':'sim');
+  const start=location.hash.slice(1);
+  setTab(tabs.some(b=>b.dataset.tab===start)?start:'sim');
 })();
 
 (function(){
@@ -574,5 +656,9 @@ regen();update();
   requestAnimationFrame(tick);
 })();
 </script>
+<script src="practice-core.js"></script>
+<script src="practice-widgets.js"></script>
+<script src="practice-questions.js"></script>
+<script src="practice.js"></script>
 </body>
 </html>
