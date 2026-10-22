@@ -215,10 +215,12 @@ table.dt td:first-child,table.dt th:first-child{text-align:left}
 
 <section id="tab-spray" role="tabpanel" aria-labelledby="tabB-spray" hidden>
 <h1>Spray-paint regression</h1>
-<p class="sub">Paint data points with a spray can and watch the least-squares line, r and R² update live. Draw weird patterns and see what the line does with them.</p>
+<p class="sub">Paint data points with a spray can and watch the fit update live. Linear mode fits a least-squares line to a continuous outcome. Logistic mode fits an S-shaped curve to a 0/1 outcome.</p>
 <div class="layout">
 
 <div class="card ctrl">
+<div class="grp">Model</div>
+<div class="seg"><button id="spLinB" aria-pressed="true">Linear</button><button id="spLogB" aria-pressed="false">Logistic</button></div>
 <div class="grp">Tool</div>
 <div class="seg"><button id="spSprayB" aria-pressed="true">Spray</button><button id="spEraseB" aria-pressed="false">Erase</button></div>
 <div class="grp">Brush</div>
@@ -227,8 +229,9 @@ table.dt td:first-child,table.dt th:first-child{text-align:left}
 <div class="sl"><label for="spDens">Density (points per second)<b id="v_spDens">80</b></label><input type="range" id="spDens" min="5" max="400" step="5" value="80"></div>
 <div class="grp">Show</div>
 <label class="chk"><input type="checkbox" id="spRes"> residuals</label>
-<label class="chk"><input type="checkbox" id="spNull" checked> mean of Y (null model)</label>
-<label class="chk"><input type="checkbox" id="spRev"> X-on-Y line (regress X on Y)</label>
+<label class="chk"><input type="checkbox" id="spNull" checked> <span id="spNullL">mean of Y (null model)</span></label>
+<label class="chk" id="spRevW"><input type="checkbox" id="spRev"> X-on-Y line (regress X on Y)</label>
+<label class="chk" id="spLpmW" hidden><input type="checkbox" id="spLpm"> straight line on the 0/1 data (linear probability model)</label>
 <div class="grp">Start from a pattern</div>
 <div class="btns" id="spPresets" style="margin-top:4px"></div>
 <div class="btns"><button id="spUndo">Undo</button><button id="spClear">Clear</button></div>
@@ -237,7 +240,7 @@ table.dt td:first-child,table.dt th:first-child{text-align:left}
 <div class="right">
 <div class="card">
 <h2>Draw here</h2>
-<p class="cap">Press and drag to spray. Hold still to pile points up. Erase mode removes points under the brush. Blue is the least-squares line and always passes through the ring at (X̄, Ȳ).</p>
+<p class="cap" id="spCap">Press and drag to spray. Hold still to pile points up. Erase mode removes points under the brush. Blue is the least-squares line and always passes through the ring at (X̄, Ȳ).</p>
 <canvas id="sprayCv" role="img" aria-label="Drawing canvas: spray data points and see the fitted regression line"></canvas>
 </div>
 <div class="card">
@@ -268,6 +271,7 @@ table.dt td:first-child,table.dt th:first-child{text-align:left}
 </section>
 </div>
 
+<script src="spray-logistic.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
 <script>
 //#math-start
@@ -514,11 +518,17 @@ regen();update();
 (function(){
   const cv=$('sprayCv'),ctx=cv.getContext('2d');
   const M={l:44,r:12,t:10,b:32};
-  let pts=[],hist=[],down=false,mx=null,my=null,erase=false,dirty=true,last=0,carry=0,W=0,H=0;
+  let pts=[],hist=[],down=false,mx=null,my=null,erase=false,dirty=true,last=0,carry=0,W=0,H=0,model='linear';
+  // Each model keeps its own points and undo history.
+  const store={linear:{pts:[],hist:[]},logistic:{pts:[],hist:[]}};
   const val=id=>parseFloat($(id).value);
   const X=x=>M.l+x/100*(W-M.l-M.r), Y=y=>H-M.b-y/100*(H-M.t-M.b);
   const iX=px=>(px-M.l)/(W-M.l-M.r)*100, iY=py=>(H-M.b-py)/(H-M.t-M.b)*100;
   const clamp=v=>Math.max(0,Math.min(100,v));
+  // Logistic points are [x, 0 or 1, j]: the outcome sits in a lane, and j is a small vertical scatter for visibility only.
+  const lane=v=>8+84*v, plotY=p=>model==='logistic'?lane(p[1])+p[2]:p[1], jit=r=>(r()-.5)*10;
+  const CAP_LIN='Press and drag to spray. Hold still to pile points up. Erase mode removes points under the brush. Blue is the least-squares line and always passes through the ring at (X̄, Ȳ).';
+  const CAP_LOG='Every point is a 0 or a 1. Spray above the orange dashed boundary to paint Y = 1 (top lane), below it to paint Y = 0 (bottom lane). The grey dashed line is the share of 1s. Points scatter a little inside a lane only so you can see them. Blue is the fitted probability curve.';
 
   function resize(){
     const r=cv.getBoundingClientRect();if(!r.width)return;
@@ -529,18 +539,21 @@ regen();update();
 
   function snapshot(){hist.push(pts.slice());if(hist.length>60)hist.shift()}
   function emit(n){
-    const R=val('spSize'),sd=val('spSpread')*R;
+    const R=val('spSize'),sd=val('spSpread')*R,y01=iY(my)>=50?1:0;
     for(let k=0;k<n;k++){
       let dx,dy,t=0;
       do{dx=gauss(Math.random)*sd;dy=gauss(Math.random)*sd;t++}while(dx*dx+dy*dy>R*R&&t<20);
       if(dx*dx+dy*dy>R*R)continue;
-      const x=iX(mx+dx),y=iY(my+dy);
+      const x=iX(mx+dx);
+      // Logistic: the outcome is fixed by which half the brush is in; the spray only spreads the points along X.
+      if(model==='logistic'){if(x>=0&&x<=100)pts.push([x,y01,jit(Math.random)]);continue}
+      const y=iY(my+dy);
       if(x>=0&&x<=100&&y>=0&&y<=100)pts.push([x,y]);
     }
   }
   function wipe(){
     const R=val('spSize'),R2=R*R;
-    pts=pts.filter(p=>{const dx=X(p[0])-mx,dy=Y(p[1])-my;return dx*dx+dy*dy>R2});
+    pts=pts.filter(p=>{const dx=X(p[0])-mx,dy=Y(plotY(p))-my;return dx*dx+dy*dy>R2});
   }
   function loc(e){const r=cv.getBoundingClientRect();mx=e.clientX-r.left;my=e.clientY-r.top;dirty=true}
 
@@ -555,11 +568,24 @@ regen();update();
   function setMode(er){
     erase=er;$('spSprayB').setAttribute('aria-pressed',!er);$('spEraseB').setAttribute('aria-pressed',er);
   }
+  function setModel(m){
+    if(m===model)return;
+    store[model]={pts,hist};model=m;({pts,hist}=store[m]);
+    const lg=m==='logistic';
+    $('spLinB').setAttribute('aria-pressed',!lg);$('spLogB').setAttribute('aria-pressed',lg);
+    $('spRevW').hidden=lg;$('spLpmW').hidden=!lg;
+    $('spNullL').textContent=lg?'proportion with Y = 1 (null model)':'mean of Y (null model)';
+    $('spCap').textContent=lg?CAP_LOG:CAP_LIN;
+    cv.setAttribute('aria-label',lg?'Drawing canvas: spray 0/1 outcomes and see the fitted logistic curve':'Drawing canvas: spray data points and see the fitted regression line');
+    buildPresets();dirty=true;
+  }
   $('spSprayB').addEventListener('click',()=>setMode(false));
   $('spEraseB').addEventListener('click',()=>setMode(true));
+  $('spLinB').addEventListener('click',()=>setModel('linear'));
+  $('spLogB').addEventListener('click',()=>setModel('logistic'));
   ['spSize','spSpread','spDens'].forEach(id=>$(id).addEventListener('input',()=>{
     const s=$(id);$('v_'+id).textContent=(+s.value).toFixed(decOf(s.step));dirty=true}));
-  ['spRes','spNull','spRev'].forEach(id=>$(id).addEventListener('change',()=>{dirty=true}));
+  ['spRes','spNull','spRev','spLpm'].forEach(id=>$(id).addEventListener('change',()=>{dirty=true}));
   $('spUndo').addEventListener('click',()=>{if(hist.length){pts=hist.pop();dirty=true}});
   $('spClear').addEventListener('click',()=>{if(pts.length){snapshot();pts=[];dirty=true}});
   document.addEventListener('keydown',e=>{
@@ -576,71 +602,136 @@ regen();update();
     'Ring':()=>make(300,()=>{const a=u(0,6.283);return[50+32*Math.cos(a)+2*g(),50+32*Math.sin(a)+2*g()]}),
     "Simpson's paradox":()=>make(360,(_,i)=>{const k=i%3,cx=[25,50,75][k],cy=[25,50,75][k]+8;const x=cx+9*g();return[x,cy-0.9*(x-cx)+3*g()]})
   };
-  Object.keys(PRESETS).forEach(name=>{
-    const b=document.createElement('button');b.textContent=name;
-    b.addEventListener('click',()=>{snapshot();pts=PRESETS[name]();dirty=true});
-    $('spPresets').appendChild(b);
-  });
+  const LPRESETS=SPL.presets(rnd);
+  function buildPresets(){
+    const lg=model==='logistic',P=lg?LPRESETS:PRESETS;$('spPresets').innerHTML='';
+    Object.keys(P).forEach(name=>{
+      const b=document.createElement('button');b.textContent=name;
+      b.addEventListener('click',()=>{snapshot();pts=lg?P[name]().map(p=>[p[0],p[1],jit(rnd)]):P[name]();dirty=true});
+      $('spPresets').appendChild(b);
+    });
+  }
+  buildPresets();
+  if(/selftest/.test(location.search))window.__spray={pts:()=>pts,model:()=>model};
 
-  function draw(){
-    if(!W)return;
-    const cs=getComputedStyle(document.documentElement),c=n=>cs.getPropertyValue(n).trim();
-    ctx.clearRect(0,0,W,H);
+  function axes(c){
     ctx.font='11px -apple-system,sans-serif';
     ctx.strokeStyle=c('--line');ctx.fillStyle=c('--mut');ctx.lineWidth=.6;
+    const lg=model==='logistic',ys=lg?[0,.25,.5,.75,1]:[0,20,40,60,80,100];
     for(let v=0;v<=100;v+=20){
       ctx.beginPath();ctx.moveTo(X(v),Y(0));ctx.lineTo(X(v),Y(100));ctx.stroke();
-      ctx.beginPath();ctx.moveTo(X(0),Y(v));ctx.lineTo(X(100),Y(v));ctx.stroke();
       ctx.textAlign='center';ctx.fillText(v,X(v),H-M.b+15);
-      ctx.textAlign='right';ctx.fillText(v,M.l-6,Y(v)+4);
     }
+    ys.forEach(v=>{const yy=Y(lg?lane(v):v);ctx.beginPath();ctx.moveTo(X(0),yy);ctx.lineTo(X(100),yy);ctx.stroke();ctx.textAlign='right';ctx.fillText(v,M.l-6,yy+4)});
     ctx.textAlign='center';ctx.fillText('X',(M.l+W-M.r)/2,H-4);
-    ctx.save();ctx.translate(12,(M.t+H-M.b)/2);ctx.rotate(-Math.PI/2);ctx.fillText('Y',0,0);ctx.restore();
-
-    const n=pts.length;let S=null;
-    if(n>=3){
-      const xs=pts.map(p=>p[0]),ys=pts.map(p=>p[1]);
-      const s=regress(xs,ys);if(s.Sxx>1e-9&&s.Syy>1e-9)S=s;
+    ctx.save();ctx.translate(12,(M.t+H-M.b)/2);ctx.rotate(-Math.PI/2);ctx.fillText(lg?'P(Y = 1)':'Y',0,0);ctx.restore();
+    if(lg){
+      ctx.setLineDash([3,4]);ctx.strokeStyle=c('--amber');ctx.beginPath();ctx.moveTo(X(0),Y(50));ctx.lineTo(X(100),Y(50));ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle=c('--amber');ctx.textAlign='right';ctx.fillText('paint boundary',X(100)-4,Y(50)-5);ctx.fillStyle=c('--mut');
+      ctx.textAlign='left';ctx.fillText('Y = 1 lane',X(0)+4,Y(lane(1))-9);ctx.fillText('Y = 0 lane',X(0)+4,Y(lane(0))+16);
     }
-    ctx.save();ctx.beginPath();ctx.rect(M.l,M.t,W-M.l-M.r,H-M.t-M.b);ctx.clip();
+  }
+  function drawPoints(c){
+    ctx.fillStyle=c('--ink');ctx.globalAlpha=.7;ctx.beginPath();
+    pts.forEach(p=>{const px=X(p[0]),py=Y(plotY(p));ctx.moveTo(px+2.6,py);ctx.arc(px,py,2.6,0,6.2832)});
+    ctx.fill();ctx.globalAlpha=1;
+  }
+  const seg=(x0,y0,x1,y1,col,w,dash)=>{ctx.strokeStyle=col;ctx.lineWidth=w;ctx.setLineDash(dash||[]);ctx.beginPath();ctx.moveTo(X(x0),Y(y0));ctx.lineTo(X(x1),Y(y1));ctx.stroke();ctx.setLineDash([])};
+  function drawLinear(c){
+    const n=pts.length;let S=null;
+    if(n>=3){const s=regress(pts.map(p=>p[0]),pts.map(p=>p[1]));if(s.Sxx>1e-9&&s.Syy>1e-9)S=s}
     if(S){
-      const line=(x0,y0,x1,y1,col,w,dash)=>{ctx.strokeStyle=col;ctx.lineWidth=w;ctx.setLineDash(dash||[]);ctx.beginPath();ctx.moveTo(X(x0),Y(y0));ctx.lineTo(X(x1),Y(y1));ctx.stroke();ctx.setLineDash([])};
-      if($('spNull').checked)line(0,S.yb,100,S.yb,c('--gray'),1.5,[6,4]);
+      if($('spNull').checked)seg(0,S.yb,100,S.yb,c('--gray'),1.5,[6,4]);
       if($('spRes').checked){
         ctx.strokeStyle=c('--red');ctx.globalAlpha=.45;ctx.lineWidth=1;ctx.beginPath();
         pts.forEach(p=>{ctx.moveTo(X(p[0]),Y(p[1]));ctx.lineTo(X(p[0]),Y(S.b0+S.b1*p[0]))});
         ctx.stroke();ctx.globalAlpha=1;
       }
-      if($('spRev').checked){
-        const r=regress(pts.map(p=>p[1]),pts.map(p=>p[0]));
-        line(r.b0,0,r.b0+r.b1*100,100,c('--green'),2,[]);
-      }
-      line(0,S.b0,100,S.b0+S.b1*100,c('--blue'),2.5);
+      if($('spRev').checked){const r=regress(pts.map(p=>p[1]),pts.map(p=>p[0]));seg(r.b0,0,r.b0+r.b1*100,100,c('--green'),2,[])}
+      seg(0,S.b0,100,S.b0+S.b1*100,c('--blue'),2.5);
     }
-    ctx.fillStyle=c('--ink');ctx.globalAlpha=.7;
-    ctx.beginPath();
-    pts.forEach(p=>{const px=X(p[0]),py=Y(p[1]);ctx.moveTo(px+2.6,py);ctx.arc(px,py,2.6,0,6.2832)});
-    ctx.fill();ctx.globalAlpha=1;
+    drawPoints(c);
     if(S){ctx.strokeStyle=c('--ink');ctx.lineWidth=1.6;ctx.beginPath();ctx.arc(X(S.xb),Y(S.yb),7,0,6.2832);ctx.stroke()}
+    return S;
+  }
+  // Points only change by push (same array, new length) or by replacing the array, so this key catches every change.
+  let fitCache={ref:null,len:-1,F:null};
+  function drawLogistic(c){
+    const xs=pts.map(p=>p[0]),ys=pts.map(p=>p[1]);
+    if(fitCache.ref!==pts||fitCache.len!==pts.length)fitCache={ref:pts,len:pts.length,F:SPL.fit(xs,ys)};
+    const F=fitCache.F;
+    if($('spNull').checked&&F.n1>0&&F.n1<F.n){const pr=F.n1/F.n;seg(0,lane(pr),100,lane(pr),c('--gray'),1.5,[6,4])}
+    if($('spLpm').checked&&F.n>=3&&F.status!=='novar'&&F.status!=='oneclass'){const s=regress(xs,ys);seg(0,lane(s.b0),100,lane(s.b0+100*s.b1),c('--green'),2)}
+    if(F.status==='ok'){
+      if($('spRes').checked){
+        ctx.strokeStyle=c('--red');ctx.globalAlpha=.45;ctx.lineWidth=1;ctx.beginPath();
+        pts.forEach(p=>{ctx.moveTo(X(p[0]),Y(plotY(p)));ctx.lineTo(X(p[0]),Y(lane(SPL.prob(F.b0,F.b1,p[0]))))});
+        ctx.stroke();ctx.globalAlpha=1;
+      }
+      ctx.strokeStyle=c('--blue');ctx.lineWidth=2.5;ctx.beginPath();
+      for(let x=0;x<=100;x+=.5){const yy=Y(lane(SPL.prob(F.b0,F.b1,x)));x?ctx.lineTo(X(x),yy):ctx.moveTo(X(x),yy)}
+      ctx.stroke();
+      if(F.x50>=0&&F.x50<=100){seg(F.x50,lane(0),F.x50,lane(1),c('--blue'),1,[2,3]);ctx.fillStyle=c('--blue');ctx.beginPath();ctx.arc(X(F.x50),Y(lane(.5)),4.5,0,6.2832);ctx.fill()}
+    }
+    if(F.status==='separated'){
+      // No finite fit: the curve becomes a step at the gap between the groups.
+      const cut=(F.lo+F.hi)/2,a=F.dir>0?0:1;
+      seg(0,lane(a),cut,lane(a),c('--blue'),2,[6,4]);seg(cut,lane(a),cut,lane(1-a),c('--blue'),2,[6,4]);seg(cut,lane(1-a),100,lane(1-a),c('--blue'),2,[6,4]);
+    }
+    drawPoints(c);
+    return F;
+  }
+
+  function draw(){
+    if(!W)return;
+    const cs=getComputedStyle(document.documentElement),c=n=>cs.getPropertyValue(n).trim();
+    ctx.clearRect(0,0,W,H);
+    axes(c);
+    ctx.save();ctx.beginPath();ctx.rect(M.l,M.t,W-M.l-M.r,H-M.t-M.b);ctx.clip();
+    const fit=model==='logistic'?drawLogistic(c):drawLinear(c);
     ctx.restore();
     if(mx!==null){
       const R=val('spSize');
       ctx.strokeStyle=erase?c('--red'):c('--amber');ctx.lineWidth=1.5;ctx.setLineDash([4,3]);
       ctx.beginPath();ctx.arc(mx,my,R,0,6.2832);ctx.stroke();ctx.setLineDash([]);
       if(!erase){ctx.beginPath();ctx.arc(mx,my,val('spSpread')*R,0,6.2832);ctx.globalAlpha=.4;ctx.stroke();ctx.globalAlpha=1}
+      if(model==='logistic'&&!erase){ctx.fillStyle=c('--amber');ctx.textAlign='left';const t=iY(my)>=50?'painting Y = 1':'painting Y = 0',w=ctx.measureText(t).width;ctx.fillText(t,mx+R+4+w>W?mx-R-4-w:mx+R+4,my+4)}
     }
-    report(S,n);
+    if(model==='logistic')reportLogistic(fit);else report(fit,pts.length);
   }
 
+  const row=(k,v)=>`<div class="row"><span>${k}</span><b>${v}</b></div>`;
   function report(S,n){
     if(!S){
       $('spFit').textContent=n<3?`n = ${n}. Paint at least 3 points to fit a line.`:'Points need to vary in both X and Y to fit a line.';
       $('spRows').innerHTML='';return;
     }
     $('spFit').innerHTML=`Fitted line: Ŷ = ${f3(S.b0)} ${S.b1<0?'−':'+'} ${f3(Math.abs(S.b1))}·X`;
-    const r=(k,v)=>`<div class="row"><span>${k}</span><b>${v}</b></div>`;
-    $('spRows').innerHTML=r('n',n)+r('r (correlation)',f3(S.r))+r('R² (variance explained)',f3(S.R2))+
-      r('b₁ (slope)',f3(S.b1))+r('b₀ (intercept)',f3(S.b0))+r('F(1, '+S.dfres+')',f3(S.F))+r('p-value',fp(S.p));
+    $('spRows').innerHTML=row('n',n)+row('r (correlation)',f3(S.r))+row('R² (variance explained)',f3(S.R2))+
+      row('b₁ (slope)',f3(S.b1))+row('b₀ (intercept)',f3(S.b0))+row('F(1, '+S.dfres+')',f3(S.F))+row('p-value',fp(S.p));
+  }
+  // Logistic numbers span many orders of magnitude, so they get significant digits and a typographic minus.
+  function sig(v){
+    if(!isFinite(v))return v>0?'∞':v<0?'−∞':'—';if(v===0)return'0';
+    const a=Math.abs(v),t=a>=1e-3&&a<1e5?String(+v.toPrecision(4)):v.toExponential(2).replace(/e\+?(-?)(\d+)/,(m,s,d)=>`×10<sup>${s?'−':''}${d}</sup>`);
+    return t.replace(/^-/,'−');
+  }
+  function reportLogistic(F){
+    const msg={few:`n = ${F.n}. Paint at least 3 points to fit a curve.`,
+      oneclass:`All ${F.n} points have Y = ${F.n1?1:0}. Spray some points in the other lane to fit a curve.`,
+      novar:'Points need different X values to fit a curve.',badY:'Every outcome must be 0 or 1.',
+      separated:`Perfect separation: every Y = 0 point is ${F.dir>0?'left':'right'} of every Y = 1 point${F.quasi?`, except that they share the X value ${sig(F.lo)}`:` (the gap runs from X = ${sig(F.lo)} to ${sig(F.hi)})`}. The likelihood keeps rising as the curve gets steeper, so there is no finite slope. Spray a few points into the other lane on the wrong side to create overlap.`,
+      noconv:'The fit did not settle because the groups almost separate. Add more overlap.'};
+    if(F.status!=='ok'){$('spFit').innerHTML=msg[F.status];$('spRows').innerHTML=F.n?row('n',`${F.n} (${F.n1} with Y = 1)`):'';return}
+    $('spFit').innerHTML=`Fitted curve: P(Y = 1) = 1 / (1 + e<sup>−(${sig(F.b0)} ${F.b1<0?'−':'+'} ${sig(Math.abs(F.b1))}·X)</sup>)`;
+    const x50=F.x50===null?'none: the curve is flat':F.x50<F.xmin||F.x50>F.xmax?'outside the data (the curve does not reach 0.5 here)':sig(F.x50);
+    // Hauck–Donner: when the curve is very steep the Wald SE balloons and the Wald test loses power; the LR test does not.
+    const waldBad=(F.pz<.05)!==(F.plr<.05);
+    $('spRows').innerHTML=row('n',`${F.n} (${F.n1} with Y = 1)`)+row('b₀ (log-odds when X = 0)',sig(F.b0))+row('b₁ (change in log-odds per unit of X)',sig(F.b1))+
+      row('Odds ratio per 10 units of X',sig(F.or10))+row('X where P(Y = 1) = 0.5',x50)+
+      row('Likelihood-ratio χ²(1), the main test',sig(F.lr))+row('p-value (likelihood ratio)',fp(F.plr))+
+      row('Wald z for b₁',`${sig(F.z)} (SE ${sig(F.se1)})`)+row('p-value (Wald)',fp(F.pz))+row('McFadden pseudo-R²',sig(F.r2))+
+      (waldBad?'<p class="sub2">The Wald test disagrees with the likelihood-ratio test here. When the curve is steep, the Wald standard error grows faster than the slope (the Hauck–Donner effect), so trust the likelihood-ratio test.</p>':'');
   }
 
   function tick(t){
