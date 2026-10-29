@@ -136,6 +136,7 @@ table.dt td:first-child,table.dt th:first-child{text-align:left}
 .sym{font:12.5px ui-monospace,SFMono-Regular,Menlo,monospace;padding:3px 7px}
 .prev{min-height:26px;overflow-x:auto;padding:2px 0}
 .tin{font-family:ui-monospace,SFMono-Regular,Menlo,monospace!important}
+#tab-inflation .two{grid-template-columns:repeat(auto-fit,minmax(min(100%,440px),1fr))}
 .sol{border-top:1px solid var(--line);margin-top:12px;padding-top:4px}
 </style>
 </head>
@@ -145,6 +146,7 @@ table.dt td:first-child,table.dt th:first-child{text-align:left}
 <button class="tab" role="tab" id="tabB-sim" data-tab="sim" aria-selected="true">Sample size and statistics</button>
 <button class="tab" role="tab" id="tabB-spray" data-tab="spray" aria-selected="false">Spray-paint regression</button>
 <button class="tab" role="tab" id="tabB-practice" data-tab="practice" aria-selected="false">Practice: formulas and reference groups</button>
+<button class="tab" role="tab" id="tabB-inflation" data-tab="inflation" aria-selected="false">Power and inflated effects</button>
 </div>
 <section id="tab-sim" role="tabpanel" aria-labelledby="tabB-sim">
 <h1>Regression Playground</h1>
@@ -253,6 +255,28 @@ table.dt td:first-child,table.dt th:first-child{text-align:left}
 </div>
 </section>
 
+<section id="tab-inflation" role="tabpanel" aria-labelledby="tabB-inflation" hidden>
+<h1>Power and inflated effects</h1>
+<p class="sub">Run thousands of identical two-group studies. Journals publish only the significant ones. Compare what really happens with what gets reported, and with what a reader ends up believing.</p>
+<div class="layout">
+<div class="card ctrl">
+<div id="ifControls"></div>
+<div class="grp">Test and publication</div>
+<div class="sl"><label for="ifAlpha">α (two-sided Welch t)</label><select id="ifAlpha"><option value="0.1">.10</option><option value="0.05" selected>.05</option><option value="0.01">.01</option><option value="0.005">.005</option></select></div>
+<div class="sl"><label for="ifRule">Published if</label><select id="ifRule"><option value="dir" selected>p &lt; α and the difference is positive</option><option value="two">p &lt; α in either direction</option></select></div>
+<div class="btns"><button id="ifNew">New studies</button><button id="ifReset">Reset</button></div>
+</div>
+<div class="right">
+<div class="card"><h2>Summary</h2><p class="cap">Simulated numbers update as you move a slider.</p><div id="ifStats"></div></div>
+<div class="two">
+<div class="card"><h2>1. Error control</h2><p class="cap">Where one study's mean difference can land if H0 or H1 is true.</p><div id="ifErr"></div><div id="ifErrNote" class="sub2"></div></div>
+<div class="card"><h2>2. Actual: every study run</h2><p class="cap">Box plots on top share the histogram's x-axis.</p><div id="ifAct"></div><div id="ifActNote" class="sub2"></div></div>
+<div class="card"><h2>3. Reported: published studies only</h2><p class="cap">The same blue studies, on their own.</p><div id="ifRep"></div><div id="ifRepNote" class="sub2"></div></div>
+<div class="card"><h2>4. Perceived vs actual</h2><p class="cap">Same spread, different centre.</p><div id="ifPer"></div><div id="ifPerNote" class="sub2"></div></div>
+</div>
+</div>
+</div>
+</section>
 <section id="tab-practice" role="tabpanel" aria-labelledby="tabB-practice" hidden>
 <h1>Practice: formulas and reference groups</h1>
 <p class="sub">Write the model, code the dummies, and rebuild the coefficients by hand. Formulas are typed; numbers are built from tiles. Every question is a new study with new numbers.</p>
@@ -751,5 +775,6 @@ regen();update();
 <script src="practice-widgets.js"></script>
 <script src="practice-questions.js"></script>
 <script src="practice.js"></script>
+<script src="inflation.js"></script>
 </body>
 </html>
