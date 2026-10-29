@@ -42,8 +42,8 @@
     return P;
   }
 
-  function simulate(P){
-    const r=mulberry(seed),{ifDiff:mu,ifSd:sd,ifN1:n1,ifN2:n2,ifK:K,alpha}=P;
+  function simulate(P,sd0){
+    const r=mulberry(sd0),{ifDiff:mu,ifSd:sd,ifN1:n1,ifN2:n2,ifK:K,alpha}=P;
     const est=new Float64Array(K),pub=new Uint8Array(K);
     let nSig=0;
     for(let k=0;k<K;k++){
@@ -72,17 +72,18 @@
   }
 
   function update(){
-    const P=read(),S=simulate(P);
+    const P=read(),S=simulate(P,seed),S0=simulate({...P,ifDiff:0},(seed^0x9e3779b9)>>>0);
     const {ifDiff:mu,ifSd:sd,ifN1:n1,ifN2:n2,alpha}=P;
     const df=n1+n2-2,se=sd*Math.sqrt(1/n1+1/n2),tc=tQ(1-alpha/2,df),crit=tc*se;
     const all=Array.from(S.est),rep=all.filter((_,k)=>S.pub[k]);
+    const all0=Array.from(S0.est),rep0=all0.filter((_,k)=>S0.pub[k]);
     const powSim=S.nSig/all.length;
     const powTh=tUpper(tc-mu/se,df)+tCdf(-tc-mu/se,df);
     const mAll=mean(all),mRep=rep.length?mean(rep):NaN;
     const exag=rep.length&&Math.abs(mu)>1e-9?mean(rep.map(Math.abs))/Math.abs(mu):NaN;
     const typeS=rep.length&&Math.abs(mu)>1e-9?rep.filter(v=>Math.sign(v)!==Math.sign(mu)).length/rep.length:NaN;
     const lo=Math.min(-crit*1.6,mu-4.2*se,...(rep.length?[Math.min(...rep)]:[])),hi=Math.max(crit*1.6,mu+4.2*se,...(rep.length?[Math.max(...rep)]:[]));
-    const C={P,S,all,rep,mu,sd,se,crit,df,lo,hi,mAll,mRep,powSim};
+    const C={P,S,all,rep,all0,rep0,mu,sd,se,crit,df,lo,hi,mAll,mRep,powSim};
     drawStats({P,mu,sd,crit,powSim,powTh,mAll,mRep,exag,typeS,nRep:rep.length,nAll:all.length});
     drawError(C);drawActual(C);drawReported(C);drawPerceived(C);
   }
@@ -103,7 +104,7 @@
   }
 
   // ---- plotting helpers ----
-  const W=640,m={l:70,r:14,t:12,b:36};
+  const W=640,m={l:88,r:14,t:12,b:36};
   function frame(H,lo,hi,ymax,xlab,boxH){
     const top=m.t+(boxH||0);
     const px=x=>m.l+(x-lo)/(hi-lo)*(W-m.l-m.r),py=y=>H-m.b-Math.min(y,ymax)/ymax*(H-top-m.b);
@@ -142,32 +143,40 @@
     $('ifErrNote').innerHTML=`Gray = H0 (no difference), blue = H1 (your true difference). Dashed lines = ±${f3(crit)}. <span style="color:var(--red)">Red</span> = α, <span style="color:var(--amber)">amber</span> = β, <span style="color:var(--blue)">blue</span> = power ≈ ${f3(powSim)}.`;
   }
 
-  function drawActual({all,rep,mu,crit,lo,hi,mAll,mRep,P}){
-    const H=320,BX=58,n=70,B=bins(lo,hi,n),cA=new Array(n).fill(0),cR=new Array(n).fill(0);
-    all.forEach(v=>cA[B.idx(v)]++);rep.forEach(v=>cR[B.idx(v)]++);
-    const F=frame(H,lo,hi,Math.max(...cA)*1.08,'observed mean difference',BX),{px,py}=F;let s=F.s;
-    s+=box(px,all,m.t+4,16,'var(--gray)','all')+box(px,rep,m.t+28,16,'var(--blue)','published');
-    cA.forEach((c,i)=>{if(c)s+=`<rect x="${px(lo+i*B.w)+.5}" y="${py(c)}" width="${px(B.w)-px(0)-1}" height="${H-m.b-py(c)}" fill="var(--gray)" opacity=".45"/>`});
-    cR.forEach((c,i)=>{if(c)s+=`<rect x="${px(lo+i*B.w)+.5}" y="${py(c)}" width="${px(B.w)-px(0)-1}" height="${H-m.b-py(c)}" fill="var(--blue)" opacity=".8"/>`});
+  // histogram as an outline only, so it can sit over filled bars
+  function stepPath(px,py,lo,w,c,col){
+    let d=`M${px(lo)},${py(0)}`;
+    c.forEach((k,i)=>{d+=`L${px(lo+i*w).toFixed(1)},${py(k).toFixed(1)}L${px(lo+(i+1)*w).toFixed(1)},${py(k).toFixed(1)}`});
+    return`<path d="${d}L${px(lo+c.length*w)},${py(0)}" fill="none" stroke="${col}" stroke-width="1.6"/>`;
+  }
+  const barsOf=(px,py,lo,w,c,col,op,H)=>c.map((k,i)=>k?`<rect x="${px(lo+i*w)+.5}" y="${py(k)}" width="${px(w)-px(0)-1}" height="${H-m.b-py(k)}" fill="${col}" opacity="${op}"/>`:'').join('');
+
+  function drawActual({all,rep,all0,mu,crit,lo,hi,mAll,P}){
+    const H=340,BX=80,n=70,B=bins(lo,hi,n),cA=new Array(n).fill(0),cR=new Array(n).fill(0),c0=new Array(n).fill(0);
+    all.forEach(v=>cA[B.idx(v)]++);rep.forEach(v=>cR[B.idx(v)]++);all0.forEach(v=>c0[B.idx(v)]++);
+    const F=frame(H,lo,hi,Math.max(...cA,...c0)*1.08,'observed mean difference',BX),{px,py}=F;let s=F.s;
+    s+=box(px,all0,m.t+4,14,'var(--gray)','H0 all')+box(px,all,m.t+26,14,'var(--blue)','H1 all')+box(px,rep,m.t+48,14,'var(--blue)','H1 published');
+    s+=barsOf(px,py,lo,B.w,cA,'var(--blue)',.22,H)+barsOf(px,py,lo,B.w,cR,'var(--blue)',.8,H)+stepPath(px,py,lo,B.w,c0,'var(--gray)');
     s+=vline(px,mu,F.top,H-m.b,'var(--green)',2.5)+vline(px,crit,F.top,H-m.b,'var(--ink)',1,'5 3');
     if(P.rule==='two')s+=vline(px,-crit,F.top,H-m.b,'var(--ink)',1,'5 3');
     s+=label(px,mu,F.top+14,`true ${f3(mu)}`,'var(--green)',lo,hi);
-    svg('ifAct',H,s,'All studies with the published ones highlighted');
-    $('ifActNote').innerHTML=`Every study run. Mean of all = ${f3(mAll)}, right on the truth. Blue = the ones that get published.`;
+    svg('ifAct',H,s,'All studies under H0 and H1, published ones highlighted');
+    $('ifActNote').innerHTML=`<span style="color:var(--gray)">Gray outline</span> = the null world (true difference 0). Pale blue = every study in your world; mean ${f3(mAll)}, right on the truth. Dark blue = the ones that get published.`;
   }
 
-  function drawReported({rep,mu,lo,hi,mRep}){
-    const H=320,BX=34,n=70,B=bins(lo,hi,n),c=new Array(n).fill(0);
-    rep.forEach(v=>c[B.idx(v)]++);
-    const F=frame(H,lo,hi,Math.max(1,...c)*1.08,'observed mean difference',BX),{px,py}=F;let s=F.s;
-    s+=box(px,rep,m.t+6,16,'var(--blue)','published');
-    c.forEach((k,i)=>{if(k)s+=`<rect x="${px(lo+i*B.w)+.5}" y="${py(k)}" width="${px(B.w)-px(0)-1}" height="${H-m.b-py(k)}" fill="var(--blue)" opacity=".8"/>`});
+  function drawReported({rep,rep0,all0,mu,lo,hi,mRep,P}){
+    const H=340,BX=58,n=70,B=bins(lo,hi,n),c=new Array(n).fill(0),c0=new Array(n).fill(0);
+    rep.forEach(v=>c[B.idx(v)]++);rep0.forEach(v=>c0[B.idx(v)]++);
+    const F=frame(H,lo,hi,Math.max(1,...c,...c0)*1.08,'observed mean difference',BX),{px,py}=F;let s=F.s;
+    s+=box(px,rep0,m.t+4,14,'var(--red)','H0 published')+box(px,rep,m.t+26,14,'var(--blue)','H1 published');
+    s+=barsOf(px,py,lo,B.w,c,'var(--blue)',.8,H)+barsOf(px,py,lo,B.w,c0,'var(--red)',.55,H);
     s+=vline(px,mu,F.top,H-m.b,'var(--green)',2.5);
     const repRight=!rep.length||mRep>=mu;
     if(rep.length)s+=vline(px,mRep,F.top,H-m.b,'var(--red)',2.5)+label(px,mRep,F.top+14,`published mean ${f3(mRep)}`,'var(--red)',lo,hi,repRight?'R':'L');
     s+=label(px,mu,F.top+14,`true ${f3(mu)}`,'var(--green)',lo,hi,repRight?'L':'R');
-    svg('ifRep',H,s,'Published studies only');
-    $('ifRepNote').innerHTML=rep.length?`Only what reaches the journal. ${rep.length} studies.`:'Nothing reached significance, so nothing is published.';
+    svg('ifRep',H,s,'Published studies only, from H1 and from H0');
+    $('ifRepNote').innerHTML=(rep.length?`Blue = published from your world: ${rep.length} of ${P.ifK}.`:'Nothing from your world reached significance.')+
+      ` <span style="color:var(--red)">Red</span> = published from the null world (false positives): ${rep0.length} of ${all0.length} = ${(100*rep0.length/all0.length).toFixed(1)}%.`;
   }
 
   function drawPerceived({mu,se,df,lo,hi,mRep}){
